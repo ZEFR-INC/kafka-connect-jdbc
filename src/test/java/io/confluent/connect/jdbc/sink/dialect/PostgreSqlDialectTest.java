@@ -19,6 +19,7 @@ package io.confluent.connect.jdbc.sink.dialect;
 import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
+import org.apache.kafka.connect.data.SchemaBuilder;
 import org.apache.kafka.connect.data.Time;
 import org.apache.kafka.connect.data.Timestamp;
 import org.junit.Test;
@@ -36,6 +37,10 @@ public class PostgreSqlDialectTest extends BaseDialectTest {
 
   @Test
   public void dataTypeMappings() {
+    SchemaBuilder arrayBuilder = SchemaBuilder.array(
+        SchemaBuilder.STRING_SCHEMA
+    );
+
     verifyDataTypeMapping("SMALLINT", Schema.INT8_SCHEMA);
     verifyDataTypeMapping("SMALLINT", Schema.INT16_SCHEMA);
     verifyDataTypeMapping("INT", Schema.INT32_SCHEMA);
@@ -49,6 +54,7 @@ public class PostgreSqlDialectTest extends BaseDialectTest {
     verifyDataTypeMapping("DATE", Date.SCHEMA);
     verifyDataTypeMapping("TIME", Time.SCHEMA);
     verifyDataTypeMapping("TIMESTAMP", Timestamp.SCHEMA);
+    verifyDataTypeMapping("TEXT[]", arrayBuilder.build());
   }
 
   @Test

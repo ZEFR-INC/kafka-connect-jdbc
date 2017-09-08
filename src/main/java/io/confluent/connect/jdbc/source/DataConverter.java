@@ -16,6 +16,8 @@
 
 package io.confluent.connect.jdbc.source;
 
+import com.google.common.collect.ImmutableSet;
+import io.confluent.connect.jdbc.util.DateTimeUtils;
 import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
@@ -28,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
+import java.sql.Array;
 import java.sql.Blob;
 import java.sql.Clob;
 import java.sql.ResultSet;
@@ -35,8 +38,8 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.SQLXML;
 import java.sql.Types;
-
-import io.confluent.connect.jdbc.util.DateTimeUtils;
+import java.util.ArrayList;
+import java.util.Set;
 
 /**
  * DataConverter handles translating table schemas to Kafka Connect schemas and row data to Kafka
@@ -44,6 +47,7 @@ import io.confluent.connect.jdbc.util.DateTimeUtils;
  */
 public class DataConverter {
   private static final Logger log = LoggerFactory.getLogger(JdbcSourceTask.class);
+  private static final Set<String> STRING_CONVERTABLE_TYPES = ImmutableSet.of("json", "jsonb", "uuid");
 
   public static Schema convertSchema(String tableName, ResultSetMetaData metadata, boolean mapNumerics)
       throws SQLException {
@@ -62,7 +66,7 @@ public class DataConverter {
     for (int col = 1; col <= metadata.getColumnCount(); col++) {
       try {
         convertFieldValue(resultSet, col, metadata.getColumnType(col), struct,
-                          metadata.getColumnLabel(col), mapNumerics);
+                          metadata.getColumnLabel(col), metadata.getColumnTypeName(col), mapNumerics);
       } catch (IOException e) {
         log.warn("Ignoring record because processing failed:", e);
       } catch (SQLException e) {
@@ -71,7 +75,6 @@ public class DataConverter {
     }
     return struct;
   }
-
 
   private static void addFieldSchema(ResultSetMetaData metadata, int col,
                                      SchemaBuilder builder, boolean mapNumerics)
@@ -95,6 +98,7 @@ public class DataConverter {
         break;
       }
 
+      case Types.BIT:
       case Types.BOOLEAN: {
         if (optional) {
           builder.field(fieldName, Schema.OPTIONAL_BOOLEAN_SCHEMA);
@@ -105,15 +109,6 @@ public class DataConverter {
       }
 
       // ints <= 8 bits
-      case Types.BIT: {
-        if (optional) {
-          builder.field(fieldName, Schema.OPTIONAL_INT8_SCHEMA);
-        } else {
-          builder.field(fieldName, Schema.INT8_SCHEMA);
-        }
-        break;
-      }
-
       case Types.TINYINT: {
         if (optional) {
           if (metadata.isSigned(col)) {
@@ -298,22 +293,47 @@ public class DataConverter {
         break;
       }
 
-      case Types.ARRAY:
+      case Types.ARRAY: {
+        SchemaBuilder arrayBuilder = SchemaBuilder.array(
+                SchemaBuilder.OPTIONAL_STRING_SCHEMA
+        );
+        if (optional) {
+          arrayBuilder.optional();
+        }
+        builder.field(fieldName, arrayBuilder.build());
+        break;
+      }
+
+      case Types.OTHER: {
+        // Some of these types will have fixed size, but we drop this from the schema conversion
+        // since only fixed byte arrays can have a fixed size
+        String typeName = metadata.getColumnTypeName(col).toLowerCase();
+        if (STRING_CONVERTABLE_TYPES.contains(typeName)) {
+          if (optional) {
+            builder.field(fieldName, Schema.OPTIONAL_STRING_SCHEMA);
+          } else {
+            builder.field(fieldName, Schema.STRING_SCHEMA);
+          }
+        } else {
+          log.warn("JDBC type {} ({}) not currently supported", sqlType, typeName);
+        }
+        break;
+      }
+
       case Types.JAVA_OBJECT:
-      case Types.OTHER:
       case Types.DISTINCT:
       case Types.STRUCT:
       case Types.REF:
       case Types.ROWID:
       default: {
-        log.warn("JDBC type {} not currently supported", sqlType);
+        log.warn("JDBC type {} ({}) not currently supported", sqlType, metadata.getColumnTypeName(col));
         break;
       }
     }
   }
 
   private static void convertFieldValue(ResultSet resultSet, int col, int colType,
-                                        Struct struct, String fieldName, boolean mapNumerics)
+                                        Struct struct, String fieldName, String typeName, boolean mapNumerics)
       throws SQLException, IOException {
     final Object colValue;
     switch (colType) {
@@ -322,18 +342,9 @@ public class DataConverter {
         break;
       }
 
+      case Types.BIT:
       case Types.BOOLEAN: {
         colValue = resultSet.getBoolean(col);
-        break;
-      }
-
-      case Types.BIT: {
-        /**
-         * BIT should be either 0 or 1.
-         * TODO: Postgres handles this differently, returning a string "t" or "f". See the
-         * elasticsearch-jdbc plugin for an example of how this is handled
-         */
-        colValue = resultSet.getByte(col);
         break;
       }
 
@@ -496,9 +507,42 @@ public class DataConverter {
         break;
       }
 
-      case Types.ARRAY:
+      case Types.ARRAY: {
+        Array arr = resultSet.getArray(col);
+        String elementTypeName = arr.getBaseTypeName();
+        boolean isStringConvertableType = STRING_CONVERTABLE_TYPES.contains(elementTypeName.toLowerCase());
+
+        // https://docs.oracle.com/javase/tutorial/jdbc/basics/array.html#retrieving_array
+        Object[] objectArray = (Object[]) arr.getArray();
+
+        // The schema validator actually expects a list, not an array
+        // For now, convert all types in the array to Strings
+        ArrayList<String> stringArray = new ArrayList<>();
+        for (Object obj: objectArray) {
+          if (obj == null) {
+            stringArray.add(null);
+          } else if (String.class.isAssignableFrom(obj.getClass()) || isStringConvertableType) {
+            stringArray.add(obj.toString());
+          } else {
+            throw new IOException("Can't process input, supported types in arrays are string, JSON, UUID, and null. Your type: " + obj.getClass());
+          }
+        }
+
+        colValue = stringArray;
+        break;
+      }
+
+      case Types.OTHER: {
+        if (STRING_CONVERTABLE_TYPES.contains(typeName.toLowerCase())) {
+          colValue = resultSet.getString(col);
+        } else {
+          return;
+        }
+
+        break;
+      }
+
       case Types.JAVA_OBJECT:
-      case Types.OTHER:
       case Types.DISTINCT:
       case Types.STRUCT:
       case Types.REF:

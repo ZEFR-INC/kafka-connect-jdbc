@@ -48,14 +48,16 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
   protected PreparedStatement stmt;
   protected ResultSet resultSet;
   protected Schema schema;
+  protected Integer fetchSize = 100;
 
   public TableQuerier(QueryMode mode, String nameOrQuery, String topicPrefix,
-                      String schemaPattern, boolean mapNumerics) {
+                      String schemaPattern, Integer fetchSize, boolean mapNumerics) {
     this.mode = mode;
     this.schemaPattern = schemaPattern;
     this.name = mode.equals(QueryMode.TABLE) ? nameOrQuery : null;
     this.query = mode.equals(QueryMode.QUERY) ? nameOrQuery : null;
     this.topicPrefix = topicPrefix;
+    this.fetchSize = fetchSize;
     this.mapNumerics = mapNumerics;
     this.lastUpdate = 0;
   }
@@ -80,7 +82,14 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
 
   public void maybeStartQuery(Connection db) throws SQLException {
     if (resultSet == null) {
+      if (fetchSize > 0) {
+        db.setAutoCommit(false);
+      }
       stmt = getOrCreatePreparedStatement(db);
+      if (fetchSize > 0) {
+        stmt.setFetchDirection(ResultSet.FETCH_FORWARD);
+        stmt.setFetchSize(fetchSize);
+      }
       resultSet = executeQuery();
       schema = DataConverter.convertSchema(name, resultSet.getMetaData(), mapNumerics);
     }
@@ -94,8 +103,8 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
 
   public abstract SourceRecord extractRecord() throws SQLException;
 
-  public void reset(long now) {
-    closeResultSetQuietly();
+  public void reset(long now, Connection db) throws SQLException {
+    closeResultSetQuietly(db);
     closeStatementQuietly();
     // TODO: Can we cache this and quickly check that it's identical for the next query
     // instead of constructing from scratch since it's almost always the same
@@ -113,10 +122,13 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
     stmt = null;
   }
 
-  private void closeResultSetQuietly() {
+  private void closeResultSetQuietly(Connection db) {
     if (resultSet != null) {
       try {
         resultSet.close();
+        if (fetchSize > 0) {
+          db.setAutoCommit(true);
+        }
       } catch (SQLException ignored) {
       }
     }

@@ -16,6 +16,12 @@
 
 package io.confluent.connect.jdbc;
 
+import io.confluent.connect.jdbc.source.EmbeddedDerby;
+import io.confluent.connect.jdbc.source.JdbcSourceConnectorConfig;
+import io.confluent.connect.jdbc.source.JdbcSourceTask;
+import io.confluent.connect.jdbc.source.JdbcSourceTaskConfig;
+import io.confluent.connect.jdbc.util.CachedConnectionProvider;
+import io.confluent.connect.jdbc.util.JdbcUtils;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.easymock.EasyMock;
 import org.junit.After;
@@ -34,13 +40,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import io.confluent.connect.jdbc.source.EmbeddedDerby;
-import io.confluent.connect.jdbc.source.JdbcSourceConnectorConfig;
-import io.confluent.connect.jdbc.source.JdbcSourceTask;
-import io.confluent.connect.jdbc.source.JdbcSourceTaskConfig;
-import io.confluent.connect.jdbc.util.CachedConnectionProvider;
-import io.confluent.connect.jdbc.util.JdbcUtils;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;

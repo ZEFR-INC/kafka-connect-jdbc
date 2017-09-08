@@ -68,7 +68,7 @@ public class BufferedRecords {
       log.debug("{} sql: {}", config.insertMode, insertSql);
       close();
       preparedStatement = connection.prepareStatement(insertSql);
-      preparedStatementBinder = new PreparedStatementBinder(preparedStatement, config.pkMode, schemaPair, fieldsMetadata, config.insertMode);
+      preparedStatementBinder = new PreparedStatementBinder(preparedStatement, config.pkMode, schemaPair, fieldsMetadata, config.insertMode, this.connection);
     }
 
     final List<SinkRecord> flushed;
@@ -120,7 +120,6 @@ public class BufferedRecords {
               config.insertMode + " records:{} , but no count of the number of rows it affected is available",
               records.size());
     }
-
 
     final List<SinkRecord> flushedRecords = records;
     records = new ArrayList<>();

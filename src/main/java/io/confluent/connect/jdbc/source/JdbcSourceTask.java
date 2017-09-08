@@ -122,6 +122,7 @@ public class JdbcSourceTask extends SourceTask {
         = config.getLong(JdbcSourceTaskConfig.TIMESTAMP_DELAY_INTERVAL_MS_CONFIG);
     boolean validateNonNulls
         = config.getBoolean(JdbcSourceTaskConfig.VALIDATE_NON_NULL_CONFIG);
+    Integer fetchSize = config.getInt(JdbcSourceTaskConfig.FETCH_SIZE_CONFIG);
 
     for (String tableOrQuery : tablesOrQuery) {
       final Map<String, String> partition;
@@ -146,20 +147,16 @@ public class JdbcSourceTask extends SourceTask {
       boolean mapNumerics = config.getBoolean(JdbcSourceTaskConfig.NUMERIC_PRECISION_MAPPING_CONFIG);
 
       if (mode.equals(JdbcSourceTaskConfig.MODE_BULK)) {
-        tableQueue.add(new BulkTableQuerier(queryMode, tableOrQuery, schemaPattern,
-                topicPrefix, mapNumerics));
+        tableQueue.add(new BulkTableQuerier(queryMode, tableOrQuery, schemaPattern, topicPrefix, fetchSize, mapNumerics));
       } else if (mode.equals(JdbcSourceTaskConfig.MODE_INCREMENTING)) {
         tableQueue.add(new TimestampIncrementingTableQuerier(
-            queryMode, tableOrQuery, topicPrefix, null, incrementingColumn, offset,
-                timestampDelayInterval, schemaPattern, mapNumerics));
+            queryMode, tableOrQuery, topicPrefix, null, incrementingColumn, offset, timestampDelayInterval, schemaPattern, fetchSize, mapNumerics));
       } else if (mode.equals(JdbcSourceTaskConfig.MODE_TIMESTAMP)) {
         tableQueue.add(new TimestampIncrementingTableQuerier(
-            queryMode, tableOrQuery, topicPrefix, timestampColumn, null, offset,
-                timestampDelayInterval, schemaPattern, mapNumerics));
+            queryMode, tableOrQuery, topicPrefix, timestampColumn, null, offset, timestampDelayInterval, schemaPattern, fetchSize, mapNumerics));
       } else if (mode.endsWith(JdbcSourceTaskConfig.MODE_TIMESTAMP_INCREMENTING)) {
         tableQueue.add(new TimestampIncrementingTableQuerier(
-            queryMode, tableOrQuery, topicPrefix, timestampColumn, incrementingColumn,
-                offset, timestampDelayInterval, schemaPattern, mapNumerics));
+            queryMode, tableOrQuery, topicPrefix, timestampColumn, incrementingColumn, offset, timestampDelayInterval, schemaPattern, fetchSize, mapNumerics));
       }
     }
 
@@ -232,7 +229,11 @@ public class JdbcSourceTask extends SourceTask {
     log.debug("Resetting querier {}", expectedHead.toString());
     TableQuerier removedQuerier = tableQueue.poll();
     assert removedQuerier == expectedHead;
-    expectedHead.reset(time.milliseconds());
+    try {
+      expectedHead.reset(time.milliseconds(), cachedConnectionProvider.getValidConnection());
+    } catch (SQLException e) {
+      log.error("Failed to reset result set for failed query.", e);
+    }
     tableQueue.add(expectedHead);
   }
 

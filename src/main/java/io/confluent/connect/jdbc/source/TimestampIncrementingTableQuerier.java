@@ -16,6 +16,8 @@
 
 package io.confluent.connect.jdbc.source;
 
+import io.confluent.connect.jdbc.util.DateTimeUtils;
+import io.confluent.connect.jdbc.util.JdbcUtils;
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
@@ -31,9 +33,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.Map;
-
-import io.confluent.connect.jdbc.util.DateTimeUtils;
-import io.confluent.connect.jdbc.util.JdbcUtils;
 
 /**
  * <p>
@@ -65,8 +64,8 @@ public class TimestampIncrementingTableQuerier extends TableQuerier {
   public TimestampIncrementingTableQuerier(QueryMode mode, String name, String topicPrefix,
                                            String timestampColumn, String incrementingColumn,
                                            Map<String, Object> offsetMap, Long timestampDelay,
-                                           String schemaPattern, boolean mapNumerics) {
-    super(mode, name, topicPrefix, schemaPattern, mapNumerics);
+                                           String schemaPattern, Integer fetchSize, boolean mapNumerics) {
+    super(mode, name, topicPrefix, schemaPattern, fetchSize, mapNumerics);
     this.timestampColumn = timestampColumn;
     this.incrementingColumn = incrementingColumn;
     this.timestampDelay = timestampDelay;

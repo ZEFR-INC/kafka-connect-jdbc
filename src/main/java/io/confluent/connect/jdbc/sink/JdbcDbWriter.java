@@ -73,7 +73,12 @@ public class JdbcDbWriter {
   }
 
   String destinationTable(String topic) {
-    final String tableName = config.tableNameFormat.replace("${topic}", topic);
+    final String tableName;
+    if (config.topicNamesToTableNamesMap.containsKey(topic)) {
+      tableName = config.topicNamesToTableNamesMap.get(topic);
+    } else {
+      tableName = config.tableNameFormat.replace("${topic}", topic);
+    }
     if (tableName.isEmpty()) {
       throw new ConnectException(String.format("Destination table name for topic '%s' is empty using the format string '%s'", topic, config.tableNameFormat));
     }

@@ -16,6 +16,10 @@
 
 package io.confluent.connect.jdbc.sink;
 
+import com.mockrunner.mock.jdbc.MockConnection;
+import io.confluent.connect.jdbc.sink.metadata.FieldsMetadata;
+import io.confluent.connect.jdbc.sink.metadata.SchemaPair;
+import io.confluent.connect.jdbc.util.DateTimeUtils;
 import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Decimal;
 import org.apache.kafka.connect.data.Schema;
@@ -29,22 +33,17 @@ import org.junit.Test;
 
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import io.confluent.connect.jdbc.sink.metadata.FieldsMetadata;
-import io.confluent.connect.jdbc.sink.metadata.SchemaPair;
-import io.confluent.connect.jdbc.util.DateTimeUtils;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 public class PreparedStatementBinderTest {
 
@@ -65,6 +64,7 @@ public class PreparedStatementBinderTest {
         .field("date", Date.SCHEMA)
         .field("time", Time.SCHEMA)
         .field("timestamp", Timestamp.SCHEMA)
+        .field("array", SchemaBuilder.array(Schema.STRING_SCHEMA))
         .field("threshold", Schema.OPTIONAL_FLOAT64_SCHEMA)
         .build();
 
@@ -82,7 +82,8 @@ public class PreparedStatementBinderTest {
         .put("decimal", new BigDecimal("1.5").setScale(0, BigDecimal.ROUND_HALF_EVEN))
         .put("date", new java.util.Date(0))
         .put("time", new java.util.Date(1000))
-        .put("timestamp", new java.util.Date(100));
+        .put("timestamp", new java.util.Date(100))
+        .put("array", new ArrayList<String>(Arrays.asList("a", "b")));
 
     SchemaPair schemaPair = new SchemaPair(null, valueSchema);
 
@@ -94,12 +95,15 @@ public class PreparedStatementBinderTest {
 
     PreparedStatement statement = mock(PreparedStatement.class);
 
+    Connection connection = new MockConnection();
+
     PreparedStatementBinder binder = new PreparedStatementBinder(
         statement,
         pkMode,
         schemaPair,
         fieldsMetadata,
-        JdbcSinkConfig.InsertMode.INSERT
+        JdbcSinkConfig.InsertMode.INSERT,
+        connection
     );
 
     binder.bindRecord(new SinkRecord("topic", 0, null, null, valueSchema, valueStruct, 0));
@@ -121,6 +125,7 @@ public class PreparedStatementBinderTest {
     verify(statement, times(1)).setDate(index++, new java.sql.Date(((java.util.Date) valueStruct.get("date")).getTime()), DateTimeUtils.UTC_CALENDAR.get());
     verify(statement, times(1)).setTime(index++, new java.sql.Time(((java.util.Date) valueStruct.get("time")).getTime()), DateTimeUtils.UTC_CALENDAR.get());
     verify(statement, times(1)).setTimestamp(index++, new java.sql.Timestamp(((java.util.Date) valueStruct.get("timestamp")).getTime()), DateTimeUtils.UTC_CALENDAR.get());
+    verify(statement, times(1)).setArray(index++, connection.createArrayOf("TEXT", new Object[]{"a", "b"}));
     // last field is optional and is null-valued in struct
     verify(statement, times(1)).setObject(index++, null);
   }
@@ -146,11 +151,13 @@ public class PreparedStatementBinderTest {
 
         PreparedStatement statement = mock(PreparedStatement.class);
 
+        Connection connection = new MockConnection();
         PreparedStatementBinder binder = new PreparedStatementBinder(
                 statement,
                 pkMode,
                 schemaPair,
-                fieldsMetadata, JdbcSinkConfig.InsertMode.UPSERT
+                fieldsMetadata, JdbcSinkConfig.InsertMode.UPSERT,
+                connection
         );
 
         binder.bindRecord(new SinkRecord("topic", 0, null, null, valueSchema, valueStruct, 0));
@@ -184,11 +191,14 @@ public class PreparedStatementBinderTest {
 
         PreparedStatement statement = mock(PreparedStatement.class);
 
+        Connection connection = new MockConnection();
+
         PreparedStatementBinder binder = new PreparedStatementBinder(
                 statement,
                 pkMode,
                 schemaPair,
-                fieldsMetadata, JdbcSinkConfig.InsertMode.UPDATE
+                fieldsMetadata, JdbcSinkConfig.InsertMode.UPDATE,
+                connection
         );
 
         binder.bindRecord(new SinkRecord("topic", 0, null, null, valueSchema, valueStruct, 0));
@@ -203,7 +213,7 @@ public class PreparedStatementBinderTest {
 
 
 
-    @Test
+  @Test
   public void bindFieldPrimitiveValues() throws SQLException {
     int index = ThreadLocalRandom.current().nextInt();
     verifyBindField(++index, Schema.INT8_SCHEMA, (byte) 42).setByte(index, (byte) 42);
@@ -238,7 +248,8 @@ public class PreparedStatementBinderTest {
         Decimal.schema(0),
         Date.SCHEMA,
         Time.SCHEMA,
-        Timestamp.SCHEMA
+        Timestamp.SCHEMA,
+        SchemaBuilder.array(Schema.STRING_SCHEMA)
     );
     int index = 0;
     for (Schema schema : nullableTypes) {
@@ -249,24 +260,18 @@ public class PreparedStatementBinderTest {
   @Test(expected = ConnectException.class)
   public void bindFieldStructUnsupported() throws SQLException {
     Schema structSchema = SchemaBuilder.struct().field("test", Schema.BOOLEAN_SCHEMA).build();
-    PreparedStatementBinder.bindField(mock(PreparedStatement.class), 1, structSchema, new Struct(structSchema));
-  }
-
-  @Test(expected = ConnectException.class)
-  public void bindFieldArrayUnsupported() throws SQLException {
-    Schema arraySchema = SchemaBuilder.array(Schema.INT8_SCHEMA);
-    PreparedStatementBinder.bindField(mock(PreparedStatement.class), 1, arraySchema, Collections.emptyList());
+    PreparedStatementBinder.bindField(mock(PreparedStatement.class), 1, structSchema, new Struct(structSchema), new MockConnection());
   }
 
   @Test(expected = ConnectException.class)
   public void bindFieldMapUnsupported() throws SQLException {
     Schema mapSchema = SchemaBuilder.map(Schema.INT8_SCHEMA, Schema.INT8_SCHEMA);
-    PreparedStatementBinder.bindField(mock(PreparedStatement.class), 1, mapSchema, Collections.emptyMap());
+    PreparedStatementBinder.bindField(mock(PreparedStatement.class), 1, mapSchema, Collections.emptyMap(), new MockConnection());
   }
 
   private PreparedStatement verifyBindField(int index, Schema schema, Object value) throws SQLException {
     PreparedStatement statement = mock(PreparedStatement.class);
-    PreparedStatementBinder.bindField(statement, index, schema, value);
+    PreparedStatementBinder.bindField(statement, index, schema, value, new MockConnection());
     return verify(statement, times(1));
   }
 

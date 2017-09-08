@@ -22,6 +22,7 @@ import org.apache.kafka.common.config.ConfigException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +37,6 @@ public class JdbcSinkConfig extends AbstractConfig {
     INSERT,
     UPSERT,
     UPDATE;
-
   }
 
   public enum PrimaryKeyMode {
@@ -70,6 +70,12 @@ public class JdbcSinkConfig extends AbstractConfig {
       "A format string for the destination table name, which may contain '${topic}' as a placeholder for the originating topic name.\n"
       + "For example, ``kafka_${topic}`` for the topic 'orders' will map to the table name 'kafka_orders'.";
   private static final String TABLE_NAME_FORMAT_DISPLAY = "Table Name Format";
+
+  public static final String TOPIC_NAMES_TO_TABLE_NAMES = "topics.to.tables";
+  private static final String TOPIC_NAMES_TO_TABLE_NAMES_DOC =
+      "A list of mappings from topic names to table names. These should be comma delimited key value pairs (separated by equal signs).\n"
+      + "For example, ``kafka_topic=topic`` will map the topic 'kafka_topic' to the table name 'topic'.";
+  private static final String TOPIC_NAMES_TO_TABLE_NAMES_DISPLAY = "Topic Names to Table Names Mapping";
 
   public static final String MAX_RETRIES = "max.retries";
   private static final int MAX_RETRIES_DEFAULT = 10;
@@ -179,6 +185,10 @@ public class JdbcSinkConfig extends AbstractConfig {
       .define(TABLE_NAME_FORMAT, ConfigDef.Type.STRING, TABLE_NAME_FORMAT_DEFAULT,
               ConfigDef.Importance.MEDIUM, TABLE_NAME_FORMAT_DOC,
               DATAMAPPING_GROUP, 1, ConfigDef.Width.LONG, TABLE_NAME_FORMAT_DISPLAY)
+      .define(TOPIC_NAMES_TO_TABLE_NAMES, ConfigDef.Type.STRING, null,
+          ConfigDef.Importance.MEDIUM, TOPIC_NAMES_TO_TABLE_NAMES_DOC,
+          WRITES_GROUP, 4, ConfigDef.Width.LONG, TOPIC_NAMES_TO_TABLE_NAMES_DISPLAY)
+      // Primary Keys
       .define(PK_MODE, ConfigDef.Type.STRING, PK_MODE_DEFAULT, EnumValidator.in(PrimaryKeyMode.values()),
               ConfigDef.Importance.HIGH, PK_MODE_DOC,
               DATAMAPPING_GROUP, 2, ConfigDef.Width.MEDIUM, PK_MODE_DISPLAY)
@@ -207,6 +217,8 @@ public class JdbcSinkConfig extends AbstractConfig {
   public final String connectionUser;
   public final String connectionPassword;
   public final String tableNameFormat;
+  public final String topicNamesToTableNames;
+  public final Map<String, String> topicNamesToTableNamesMap;
   public final int batchSize;
   public final int maxRetries;
   public final int retryBackoffMs;
@@ -223,6 +235,9 @@ public class JdbcSinkConfig extends AbstractConfig {
     connectionUser = getString(CONNECTION_USER);
     connectionPassword = getPasswordValue(CONNECTION_PASSWORD);
     tableNameFormat = getString(TABLE_NAME_FORMAT).trim();
+    topicNamesToTableNames = getString(TOPIC_NAMES_TO_TABLE_NAMES);
+    topicNamesToTableNamesMap = (topicNamesToTableNames != null) ?
+      StringUtils.stringToMap(topicNamesToTableNames, ",", "=") : new HashMap<String, String>();
     batchSize = getInt(BATCH_SIZE);
     maxRetries = getInt(MAX_RETRIES);
     retryBackoffMs = getInt(RETRY_BACKOFF_MS);
@@ -278,4 +293,5 @@ public class JdbcSinkConfig extends AbstractConfig {
   public static void main(String... args) {
     System.out.println(CONFIG_DEF.toEnrichedRst());
   }
+
 }
