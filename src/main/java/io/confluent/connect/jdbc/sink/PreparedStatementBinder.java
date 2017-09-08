@@ -28,6 +28,8 @@ import org.apache.kafka.connect.data.Time;
 import org.apache.kafka.connect.data.Timestamp;
 import org.apache.kafka.connect.errors.ConnectException;
 import org.apache.kafka.connect.sink.SinkRecord;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.nio.ByteBuffer;
@@ -37,6 +39,9 @@ import java.sql.SQLException;
 import java.util.List;
 
 public class PreparedStatementBinder {
+  // DEBUG
+  private static final Logger log = LoggerFactory.getLogger(JdbcSinkTask.class);
+  // END DEBUG
 
   private final JdbcSinkConfig.PrimaryKeyMode pkMode;
   private final PreparedStatement statement;
