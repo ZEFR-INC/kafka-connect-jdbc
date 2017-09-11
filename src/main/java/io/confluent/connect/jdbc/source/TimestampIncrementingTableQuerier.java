@@ -164,7 +164,7 @@ public class TimestampIncrementingTableQuerier extends TableQuerier {
       stmt.setTimestamp(2, tsOffset, DateTimeUtils.UTC_CALENDAR.get());
       stmt.setLong(3, incOffset);
       stmt.setTimestamp(4, tsOffset, DateTimeUtils.UTC_CALENDAR.get());
-      if (incrementingColumn != null && limit != -1) {
+      if (limit != -1) {
         stmt.setInt(5, limit);
       }
       log.debug("Executing prepared statement with start time value = {} end time = {} and incrementing value = {}",
@@ -174,7 +174,12 @@ public class TimestampIncrementingTableQuerier extends TableQuerier {
     } else if (incrementingColumn != null) {
       Long incOffset = offset.getIncrementingOffset();
       stmt.setLong(1, incOffset);
-      log.debug("Executing prepared statement with incrementing value = {}", incOffset);
+
+      if (limit != -1) {
+        stmt.setInt(2, limit);
+      }
+
+      log.debug("Executing prepared statement with incrementing value = {}, limit = {}", incOffset, limit);
     } else if (timestampColumn != null) {
       Timestamp tsOffset = offset.getTimestampOffset();
       Timestamp endTime = new Timestamp(JdbcUtils.getCurrentTimeOnDB(stmt.getConnection(), DateTimeUtils.UTC_CALENDAR.get()).getTime() - timestampDelay);
