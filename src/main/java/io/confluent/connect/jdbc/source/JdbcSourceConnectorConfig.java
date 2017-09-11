@@ -74,6 +74,14 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
   public static final int FETCH_SIZE_DEFAULT = 100;
   private static final String FETCH_SIZE_CONFIG_DOC = "Number of records to fetch when getting results based on cursor";
 
+  public static final String LIMIT_MAX_ROWS_CONFIG = "limit.rows";
+  private static final String LIMIT_MAX_ROWS_DOC =
+          "Limit the number of rows queried. The limit is appended to the query and is only available "
+                  + "for autoincrementing columns. Note that the incrementing column should be append-only, "
+                  + "to ensure that no duplicate rows are read.";
+  public static final int LIMIT_MAX_ROWS_DEFAULT = -1;
+  private static final String LIMIT_MAX_ROWS_DISPLAY = "Limit rows per query";
+
   public static final String NUMERIC_PRECISION_MAPPING_CONFIG = "numeric.precision.mapping";
   private static final String NUMERIC_PRECISION_MAPPING_DOC =
           "Whether or not to attempt mapping NUMERIC values by precision to integral types";
@@ -230,6 +238,7 @@ public class JdbcSourceConnectorConfig extends AbstractConfig {
         .define(QUERY_CONFIG, Type.STRING, QUERY_DEFAULT, Importance.MEDIUM, QUERY_DOC, MODE_GROUP, 5, Width.SHORT, QUERY_DISPLAY)
         .define(POLL_INTERVAL_MS_CONFIG, Type.INT, POLL_INTERVAL_MS_DEFAULT, Importance.HIGH, POLL_INTERVAL_MS_DOC, CONNECTOR_GROUP, 1, Width.SHORT, POLL_INTERVAL_MS_DISPLAY)
         .define(BATCH_MAX_ROWS_CONFIG, Type.INT, BATCH_MAX_ROWS_DEFAULT, Importance.LOW, BATCH_MAX_ROWS_DOC, CONNECTOR_GROUP, 2, Width.SHORT, BATCH_MAX_ROWS_DISPLAY)
+        .define(LIMIT_MAX_ROWS_CONFIG, Type.INT, LIMIT_MAX_ROWS_DEFAULT, Importance.LOW, LIMIT_MAX_ROWS_DOC, CONNECTOR_GROUP, 2, Width.SHORT, LIMIT_MAX_ROWS_DISPLAY)
         .define(TABLE_POLL_INTERVAL_MS_CONFIG, Type.LONG, TABLE_POLL_INTERVAL_MS_DEFAULT, Importance.LOW, TABLE_POLL_INTERVAL_MS_DOC, CONNECTOR_GROUP, 3, Width.SHORT, TABLE_POLL_INTERVAL_MS_DISPLAY)
         .define(TOPIC_PREFIX_CONFIG, Type.STRING, Importance.HIGH, TOPIC_PREFIX_DOC, CONNECTOR_GROUP, 4, Width.MEDIUM, TOPIC_PREFIX_DISPLAY)
         .define(TIMESTAMP_DELAY_INTERVAL_MS_CONFIG, Type.LONG, TIMESTAMP_DELAY_INTERVAL_MS_DEFAULT, Importance.HIGH, TIMESTAMP_DELAY_INTERVAL_MS_DOC, CONNECTOR_GROUP, 5, Width.MEDIUM, TIMESTAMP_DELAY_INTERVAL_MS_DISPLAY)

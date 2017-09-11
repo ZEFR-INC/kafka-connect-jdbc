@@ -60,16 +60,19 @@ public class TimestampIncrementingTableQuerier extends TableQuerier {
   private String incrementingColumn;
   private long timestampDelay;
   private TimestampIncrementingOffset offset;
+  private int limit;
 
   public TimestampIncrementingTableQuerier(QueryMode mode, String name, String topicPrefix,
                                            String timestampColumn, String incrementingColumn,
                                            Map<String, Object> offsetMap, Long timestampDelay,
-                                           String schemaPattern, Integer fetchSize, boolean mapNumerics) {
+                                           String schemaPattern, Integer fetchSize, boolean mapNumerics, int limit) {
     super(mode, name, topicPrefix, schemaPattern, fetchSize, mapNumerics);
+
     this.timestampColumn = timestampColumn;
     this.incrementingColumn = incrementingColumn;
     this.timestampDelay = timestampDelay;
     this.offset = TimestampIncrementingOffset.fromMap(offsetMap);
+    this.limit = limit;
   }
 
   @Override
@@ -140,6 +143,12 @@ public class TimestampIncrementingTableQuerier extends TableQuerier {
       builder.append(JdbcUtils.quoteString(timestampColumn, quoteString));
       builder.append(" ASC");
     }
+
+    // default to no limit.
+    if (incrementingColumn != null && limit != -1) {
+      builder.append(" LIMIT ?");
+    }
+
     String queryString = builder.toString();
     log.debug("{} prepared SQL query: {}", this, queryString);
     stmt = db.prepareStatement(queryString);
@@ -155,6 +164,9 @@ public class TimestampIncrementingTableQuerier extends TableQuerier {
       stmt.setTimestamp(2, tsOffset, DateTimeUtils.UTC_CALENDAR.get());
       stmt.setLong(3, incOffset);
       stmt.setTimestamp(4, tsOffset, DateTimeUtils.UTC_CALENDAR.get());
+      if (incrementingColumn != null && limit != -1) {
+        stmt.setInt(5, limit);
+      }
       log.debug("Executing prepared statement with start time value = {} end time = {} and incrementing value = {}",
                 DateTimeUtils.formatUtcTimestamp(tsOffset),
                 DateTimeUtils.formatUtcTimestamp(endTime),
