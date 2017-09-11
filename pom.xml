@@ -51,8 +51,8 @@
 
     <distributionManagement>
         <repository>
-            <id>nexus</id>
-            <url>http://ec2-54-210-98-107.compute-1.amazonaws.com:8081/repository/maven-releases/</url>
+            <id>zefr</id>
+            <url>https://zefr.jfrog.io/zefr/libs-snapshot/</url>
         </repository>
     </distributionManagement>
 
