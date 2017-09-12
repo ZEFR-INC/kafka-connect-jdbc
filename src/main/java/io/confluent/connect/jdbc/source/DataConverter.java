@@ -509,26 +509,33 @@ public class DataConverter {
 
       case Types.ARRAY: {
         Array arr = resultSet.getArray(col);
-        String elementTypeName = arr.getBaseTypeName();
-        boolean isStringConvertableType = STRING_CONVERTABLE_TYPES.contains(elementTypeName.toLowerCase());
+        if (arr == null) {
+          colValue = null;
+        } else {
 
-        // https://docs.oracle.com/javase/tutorial/jdbc/basics/array.html#retrieving_array
-        Object[] objectArray = (Object[]) arr.getArray();
+          String elementTypeName = arr.getBaseTypeName();
+          boolean isStringConvertableType = STRING_CONVERTABLE_TYPES.contains(elementTypeName.toLowerCase());
 
-        // The schema validator actually expects a list, not an array
-        // For now, convert all types in the array to Strings
-        ArrayList<String> stringArray = new ArrayList<>();
-        for (Object obj: objectArray) {
-          if (obj == null) {
-            stringArray.add(null);
-          } else if (String.class.isAssignableFrom(obj.getClass()) || isStringConvertableType) {
-            stringArray.add(obj.toString());
-          } else {
-            throw new IOException("Can't process input, supported types in arrays are string, JSON, UUID, and null. Your type: " + obj.getClass());
+          // https://docs.oracle.com/javase/tutorial/jdbc/basics/array.html#retrieving_array
+          Object[] objectArray = (Object[]) arr.getArray();
+
+          // The schema validator actually expects a list, not an array
+          // For now, convert all types in the array to Strings
+          ArrayList<String> stringArray = new ArrayList<>();
+          for (Object obj: objectArray) {
+            if (obj == null) {
+              stringArray.add(null);
+            } else if (String.class.isAssignableFrom(obj.getClass()) || isStringConvertableType) {
+              stringArray.add(obj.toString());
+            } else {
+              throw new IOException("Can't process input, supported types in arrays are string, JSON, UUID, and null. Your type: " + obj.getClass());
+            }
           }
+
+          colValue = stringArray;
+
         }
 
-        colValue = stringArray;
         break;
       }
 
