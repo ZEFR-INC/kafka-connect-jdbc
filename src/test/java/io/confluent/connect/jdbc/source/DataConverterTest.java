@@ -59,6 +59,7 @@ public class DataConverterTest {
         rowSetMetaData.setColumnType(columnIndex, Types.ARRAY);
         rowSetMetaData.setColumnTypeName(columnIndex, "ARRAY");
         rowSetMetaData.setColumnLabel(columnIndex, "array_column");
+        rowSetMetaData.setNullable(columnIndex, 1);
         return rowSetMetaData;
     }
 
@@ -282,5 +283,26 @@ public class DataConverterTest {
         List<String> expectedResult = Arrays.asList("a", null, "b");
         assertEquals("Expected Array to match Array of Strings and nulls", expectedResult, record.get("array_column"));
 
+    }
+
+    @Test
+    public void convertsAnArrayThatIsNullToNull() throws SQLException {
+        final String tableName = "test";
+        final ResultSetMetaData metaData = createArrayMetadata();
+        boolean mapNumerics = false;
+        Schema schema = DataConverter.convertSchema(tableName, metaData, mapNumerics);
+
+        MockResultSet mockResultSet = new MockResultSet("myResults");
+        mockResultSet.addColumn("array_column");
+        mockResultSet.setResultSetMetaData(metaData);
+
+        Array numbersArray = null;
+        mockResultSet.addRow(new Object[]{numbersArray});
+
+        // Point the cursor at the first row
+        mockResultSet.next();
+
+        Struct record = DataConverter.convertRecord(schema, mockResultSet, mapNumerics);
+        assertEquals("Expected Array to match null", null, record.get("array_column"));
     }
 }

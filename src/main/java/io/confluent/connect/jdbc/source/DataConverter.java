@@ -515,6 +515,11 @@ public class DataConverter {
 
       case Types.ARRAY: {
         Array arr = resultSet.getArray(col);
+        if (arr == null) {
+          colValue = null;
+          break;
+        }
+
         String elementTypeName = arr.getBaseTypeName();
         boolean isStringConvertableType = STRING_CONVERTABLE_TYPES.contains(elementTypeName.toLowerCase());
 
