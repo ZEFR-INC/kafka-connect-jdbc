@@ -67,13 +67,16 @@ public class DataConverter {
     ResultSetMetaData metadata = resultSet.getMetaData();
     Struct struct = new Struct(schema);
     for (int col = 1; col <= metadata.getColumnCount(); col++) {
+      String columnLabel = metadata.getColumnLabel(col);
       try {
         convertFieldValue(resultSet, col, metadata.getColumnType(col), struct,
-                          metadata.getColumnLabel(col), metadata.getColumnTypeName(col), mapNumerics);
+                          columnLabel, metadata.getColumnTypeName(col), mapNumerics);
       } catch (IOException e) {
-        log.warn("Ignoring record because processing failed:", e);
+        String tableName = metadata.getTableName(col);
+        log.warn("Ignoring record because processing failed for table " + tableName + " field " + columnLabel + ":", e);
       } catch (SQLException e) {
-        log.warn("Ignoring record due to SQL error:", e);
+        String tableName = metadata.getTableName(col);
+        log.warn("Ignoring record due to SQL error for table " + tableName + " field " + columnLabel + ":", e);
       }
     }
     return struct;
