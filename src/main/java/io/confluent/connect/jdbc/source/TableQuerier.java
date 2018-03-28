@@ -109,6 +109,7 @@ abstract class TableQuerier implements Comparable<TableQuerier> {
     // TODO: Can we cache this and quickly check that it's identical for the next query
     // instead of constructing from scratch since it's almost always the same
     schema = null;
+
     lastUpdate = now;
   }
 

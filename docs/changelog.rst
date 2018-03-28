@@ -3,6 +3,65 @@
 Changelog
 =========
 
+Version 4.0.0
+-------------
+
+JDBC Source Connector
+~~~~~~~~~~~~~~~~~~~~~
+
+* `PR-295 <https://github.com/confluentinc/kafka-connect-jdbc/pull/295>`_ - Remove unused imports
+* `PR-288 <https://github.com/confluentinc/kafka-connect-jdbc/pull/288>`_ - Remove unnecessary surefire configuration overrides.
+* `PR-287 <https://github.com/confluentinc/kafka-connect-jdbc/pull/287>`_ - CC-1112: Use common pom as parent and fix checkstyle issues.
+* `PR-212 <https://github.com/confluentinc/kafka-connect-jdbc/pull/212>`_ - Fixed issue #211 - get current timestamp on DB2 UDB for AS/400
+* `PR-203 <https://github.com/confluentinc/kafka-connect-jdbc/pull/203>`_ - Issue #198: Improved the JdbcSourceConnector to retry JDBC connection when needed on startup
+
+JDBC Sink Connector
+~~~~~~~~~~~~~~~~~~~~~
+
+* `PR-295 <https://github.com/confluentinc/kafka-connect-jdbc/pull/295>`_ - Remove unused imports
+* `PR-288 <https://github.com/confluentinc/kafka-connect-jdbc/pull/288>`_ - Remove unnecessary surefire configuration overrides.
+* `PR-287 <https://github.com/confluentinc/kafka-connect-jdbc/pull/287>`_ - CC-1112: Use common pom as parent and fix checkstyle issues.
+* `PR-212 <https://github.com/confluentinc/kafka-connect-jdbc/pull/212>`_ - Fixed issue #211 - get current timestamp on DB2 UDB for AS/400
+* `PR-250 <https://github.com/confluentinc/kafka-connect-jdbc/pull/250>`_ - Fix typo (dd -> add)
+
+Version 3.3.1
+-------------
+
+JDBC Source Connector
+~~~~~~~~~~~~~~~~~~~~~
+
+* `PR-293 <https://github.com/confluentinc/kafka-connect-jdbc/pull/293>`_ - Fix source connector start/stop test
+* `PR-285 <https://github.com/confluentinc/kafka-connect-jdbc/pull/285>`_ - Add upstream project so build are triggered automatically
+* `PR-273 <https://github.com/confluentinc/kafka-connect-jdbc/pull/273>`_ - CC-1065 Source connector’s recommender uses table type filter and caches results
+* `PR-272 <https://github.com/confluentinc/kafka-connect-jdbc/pull/272>`_ - CC-1064 Corrected the table name recommender to always close the JDBC connection
+
+JDBC Sink Connector
+~~~~~~~~~~~~~~~~~~~~~
+No changes
+
+Version 3.3.0
+-------------
+
+JDBC Source Connector
+~~~~~~~~~~~~~~~~~~~~~
+No changes
+
+JDBC Sink Connector
+~~~~~~~~~~~~~~~~~~~
+* `PR-188 <https://github.com/confluentinc/kafka-connect-jdbc/pull/188>`_ - Add rpm build to lifecycle.
+* `PR-195 <https://github.com/confluentinc/kafka-connect-jdbc/pull/195>`_ - Statement.SUCCESS_NO_INFO should be treated in BufferedRecords.flush.
+* `PR-202 <https://github.com/confluentinc/kafka-connect-jdbc/pull/202>`_ - HP Vertica dialect.
+* `PR-205 <https://github.com/confluentinc/kafka-connect-jdbc/pull/205>`_ - JDBC Sink Connector - Add insert.mode = UPDATE, that generates only update queries.
+
+Version 3.2.2
+-------------
+
+No changes
+
+Version 3.2.1
+-------------
+No changes
+
 Version 3.2.0
 -------------
 

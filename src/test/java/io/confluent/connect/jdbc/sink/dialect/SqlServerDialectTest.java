@@ -97,13 +97,13 @@ public class SqlServerDialectTest extends BaseDialectTest {
 
   @Test
   public void upsert1() {
-      assertEquals(
-              "merge into [Customer] with (HOLDLOCK) AS target using (select ? AS [id], ? AS [name], ? AS [salary], ? AS [address]) "
-                      + "AS incoming on (target.[id]=incoming.[id]) when matched then update set "
-                      + "[name]=incoming.[name],[salary]=incoming.[salary],[address]=incoming.[address] when not matched then insert "
-                      + "([name], [salary], [address], [id]) values (incoming.[name],incoming.[salary],incoming.[address],incoming.[id]);",
-              dialect.getUpsertQuery("Customer", Collections.singletonList("id"), Arrays.asList("name", "salary", "address"))
-      );
+    assertEquals(
+        "merge into [Customer] with (HOLDLOCK) AS target using (select ? AS [id], ? AS [name], ? AS [salary], ? AS [address]) "
+        + "AS incoming on (target.[id]=incoming.[id]) when matched then update set "
+        + "[name]=incoming.[name],[salary]=incoming.[salary],[address]=incoming.[address] when not matched then insert "
+        + "([name], [salary], [address], [id]) values (incoming.[name],incoming.[salary],incoming.[address],incoming.[id]);",
+        dialect.getUpsertQuery("Customer", Collections.singletonList("id"), Arrays.asList("name", "salary", "address"))
+    );
   }
 
   @Test

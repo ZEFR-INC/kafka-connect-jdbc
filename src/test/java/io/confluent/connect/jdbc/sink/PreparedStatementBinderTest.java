@@ -53,7 +53,7 @@ import static org.mockito.Mockito.verify;
 public class PreparedStatementBinderTest {
 
   @Test
-  public void bindRecord() throws SQLException, ParseException {
+  public void bindRecordInsert() throws SQLException, ParseException {
     Schema valueSchema = SchemaBuilder.struct().name("com.example.Person")
         .field("firstName", Schema.STRING_SCHEMA)
         .field("lastName", Schema.STRING_SCHEMA)
@@ -107,6 +107,7 @@ public class PreparedStatementBinderTest {
         pkMode,
         schemaPair,
         fieldsMetadata,
+        JdbcSinkConfig.InsertMode.INSERT,
         connection
     );
 
@@ -134,8 +135,91 @@ public class PreparedStatementBinderTest {
     verify(statement, times(1)).setObject(index++, null);
   }
 
+    @Test
+    public void bindRecordUpsertMode() throws SQLException, ParseException {
+        Schema valueSchema = SchemaBuilder.struct().name("com.example.Person")
+                .field("firstName", Schema.STRING_SCHEMA)
+                .field("long", Schema.INT64_SCHEMA)
+                .build();
 
-  @Test
+        Struct valueStruct = new Struct(valueSchema)
+                .put("firstName", "Alex")
+                .put("long", (long) 12425436);
+
+        SchemaPair schemaPair = new SchemaPair(null, valueSchema);
+
+        JdbcSinkConfig.PrimaryKeyMode pkMode = JdbcSinkConfig.PrimaryKeyMode.RECORD_VALUE;
+
+        List<String> pkFields = Collections.singletonList("long");
+
+        FieldsMetadata fieldsMetadata = FieldsMetadata.extract("people", pkMode, pkFields, Collections.<String>emptySet(), schemaPair);
+
+        PreparedStatement statement = mock(PreparedStatement.class);
+
+        Connection connection = new MockConnection();
+
+        PreparedStatementBinder binder = new PreparedStatementBinder(
+                statement,
+                pkMode,
+                schemaPair,
+                fieldsMetadata, JdbcSinkConfig.InsertMode.UPSERT,
+                connection
+        );
+
+        binder.bindRecord(new SinkRecord("topic", 0, null, null, valueSchema, valueStruct, 0));
+
+        int index = 1;
+        // key field first
+        verify(statement, times(1)).setLong(index++, valueStruct.getInt64("long"));
+        // rest in order of schema def
+        verify(statement, times(1)).setString(index++, valueStruct.getString("firstName"));
+    }
+
+    @Test
+    public void bindRecordUpdateMode() throws SQLException, ParseException {
+        Schema valueSchema = SchemaBuilder.struct().name("com.example.Person")
+                .field("firstName", Schema.STRING_SCHEMA)
+                .field("long", Schema.INT64_SCHEMA)
+                .build();
+
+        Struct valueStruct = new Struct(valueSchema)
+                .put("firstName", "Alex")
+                .put("long", (long) 12425436);
+
+        SchemaPair schemaPair = new SchemaPair(null, valueSchema);
+
+        JdbcSinkConfig.PrimaryKeyMode pkMode = JdbcSinkConfig.PrimaryKeyMode.RECORD_VALUE;
+
+        List<String> pkFields = Collections.singletonList("long");
+
+        FieldsMetadata fieldsMetadata = FieldsMetadata.extract("people", pkMode, pkFields,
+                Collections.<String>emptySet(), schemaPair);
+
+        PreparedStatement statement = mock(PreparedStatement.class);
+
+        Connection connection = new MockConnection();
+
+        PreparedStatementBinder binder = new PreparedStatementBinder(
+                statement,
+                pkMode,
+                schemaPair,
+                fieldsMetadata, JdbcSinkConfig.InsertMode.UPDATE,
+                connection
+        );
+
+        binder.bindRecord(new SinkRecord("topic", 0, null, null, valueSchema, valueStruct, 0));
+
+        int index = 1;
+
+        // non key first
+        verify(statement, times(1)).setString(index++, valueStruct.getString("firstName"));
+        // last the keys
+        verify(statement, times(1)).setLong(index++, valueStruct.getInt64("long"));
+    }
+
+
+
+    @Test
   public void bindFieldPrimitiveValues() throws SQLException {
     int index = ThreadLocalRandom.current().nextInt();
     verifyBindField(++index, Schema.INT8_SCHEMA, (byte) 42).setByte(index, (byte) 42);
