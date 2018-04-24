@@ -94,6 +94,9 @@ public class DataConverter {
     String label = metadata.getColumnLabel(col);
     String name = metadata.getColumnName(col);
     String fieldName = label != null && !label.isEmpty() ? label : name;
+    String tableName = metadata.getTableName(col);
+    String typeName = metadata.getColumnTypeName(col).toLowerCase();
+    final String UNSUPPORTED_ERROR_MESSAGE = "JDBC type {} ({}) not currently supported for field ({}) in table ({})";
 
     int sqlType = metadata.getColumnType(col);
     boolean optional = false;
@@ -104,7 +107,7 @@ public class DataConverter {
 
     switch (sqlType) {
       case Types.NULL: {
-        log.warn("JDBC type {} not currently supported", sqlType);
+        log.warn(UNSUPPORTED_ERROR_MESSAGE, sqlType, typeName, fieldName, tableName);
         break;
       }
 
@@ -319,7 +322,7 @@ public class DataConverter {
       case Types.OTHER: {
         // Some of these types will have fixed size, but we drop this from the schema conversion
         // since only fixed byte arrays can have a fixed size
-        String typeName = metadata.getColumnTypeName(col).toLowerCase();
+
         if (STRING_CONVERTABLE_TYPES.contains(typeName)) {
           if (optional) {
             builder.field(fieldName, Schema.OPTIONAL_STRING_SCHEMA);
@@ -327,7 +330,7 @@ public class DataConverter {
             builder.field(fieldName, Schema.STRING_SCHEMA);
           }
         } else {
-          log.warn("JDBC type {} ({}) not currently supported", sqlType, typeName);
+          log.warn(UNSUPPORTED_ERROR_MESSAGE, sqlType, typeName, fieldName, tableName);
         }
         break;
       }
@@ -338,7 +341,7 @@ public class DataConverter {
       case Types.REF:
       case Types.ROWID:
       default: {
-        log.warn("JDBC type {} ({}) not currently supported", sqlType, metadata.getColumnTypeName(col));
+        log.warn(UNSUPPORTED_ERROR_MESSAGE, sqlType, typeName, fieldName, tableName);
         break;
       }
     }
